@@ -1,5 +1,8 @@
 # PDF RAG System
 
+**Author:** Rana Karmakar (Gen AI Engineer)  
+**Email:** ranakarmakar027@gmail.com
+
 A comprehensive Retrieval-Augmented Generation (RAG) system for PDF documents using LangChain, LangGraph, and Groq LLM.
 
 ## Features
