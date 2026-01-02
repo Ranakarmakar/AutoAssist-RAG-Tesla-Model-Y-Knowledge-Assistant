@@ -1,0 +1,85 @@
+# Docker Compose configuration for PDF RAG System
+# This example shows how to deploy the system with Redis caching
+
+version: '3.8'
+
+services:
+  pdf-rag-api:
+    build: 
+      context: ../..
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - REDIS_URL=redis://redis:6379/0
+      - VECTOR_STORE_PATH=/app/data/vector_store
+      - UPLOAD_PATH=/app/data/uploads
+      - CACHE_DIR=/app/data/cache
+      - LOG_LEVEL=INFO
+      - ENABLE_CACHING=true
+      - CACHE_MEMORY_SIZE=5000
+    volumes:
+      - pdf_rag_data:/app/data
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: Monitoring with Prometheus and Grafana
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+
+volumes:
+  pdf_rag_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  default:
+    name: pdf-rag-network
